@@ -56,7 +56,7 @@
             <label for="callId">ID звонка Скорозвона</label>
             <input id="callId" value="demo-call-1042" required />
             <label for="entityType">Куда передавать</label>
-            <select id="entityType"><option value="deal">Сделка</option><option value="lead">Лид</option></select>
+              <select id="entityType"><option value="lead" selected>Лид — первая стадия</option><option value="deal">Сделка</option></select>
             <button type="submit">Передать в CRM</button>
           </form>
         </div>
@@ -112,7 +112,8 @@
               fields: {
                 UF_CRM_CLIENT_PHONE: clientPhone,
                 UF_CRM_SUCCESS_CALLER_ID: callerId,
-                UF_CRM_SKOROZVON_CALL_ID: payload.call_id
+                UF_CRM_SKOROZVON_CALL_ID: payload.call_id,
+                STATUS_ID: "NEW"
               }
             };
           }
