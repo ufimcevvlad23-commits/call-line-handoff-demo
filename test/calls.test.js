@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildCrmFields, normalizePhone, normalizeSkorozvonEvent, parseLineMap, validateEvent } from "../lib/calls.js";
+import { buildCrmFields, getFieldMap, normalizePhone, normalizeSkorozvonEvent, parseLineMap, validateEvent } from "../lib/calls.js";
+import { buildManagerLink, signEntity, verifyEntitySignature } from "../lib/signing.js";
 
 test("normalizes Russian phone numbers", () => {
   assert.equal(normalizePhone("8 (999) 123-45-67"), "79991234567");
@@ -31,4 +32,21 @@ test("builds CRM fields", () => {
 test("defaults new events to leads", () => {
   const event = normalizeSkorozvonEvent({ call_id: "abc", client_phone: "79991234567", caller_id: "79031112233" });
   assert.equal(event.entityType, "lead");
+});
+
+test("uses Bitrix field identifiers from the environment", () => {
+  const fieldMap = getFieldMap({ BITRIX_FIELD_SUCCESS_CALLER_ID: "UF_CRM_SKZ_SUCCESS_CALLER_ID" });
+  const event = normalizeSkorozvonEvent({ call_id: "abc", client_phone: "79991234567", caller_id: "79031112233" });
+  const fields = buildCrmFields(event, "", { fieldMap });
+  assert.equal(fields.UF_CRM_SKZ_SUCCESS_CALLER_ID, "79031112233");
+});
+
+test("signs manager links and rejects a changed lead ID", () => {
+  const secret = "test-secret";
+  const signature = signEntity("lead", "42", secret);
+  assert.equal(verifyEntitySignature("lead", "42", signature, secret), true);
+  assert.equal(verifyEntitySignature("lead", "43", signature, secret), false);
+  const url = new URL(buildManagerLink("https://bridge.example", "lead", "42", secret));
+  assert.equal(url.pathname, "/manager-call");
+  assert.equal(url.searchParams.get("entityId"), "42");
 });

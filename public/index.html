@@ -39,9 +39,9 @@
     <main>
       <header>
         <div>
-          <span class="badge">БЕЗОПАСНЫЙ ДЕМО-РЕЖИМ</span>
+          <span id="modeBadge" class="badge">ПРОВЕРКА КОНТУРА</span>
           <h1>Скорозвон → Битрикс24 → звонок с того же номера</h1>
-          <p>Прототип показывает весь путь номера успешного дозвона. Боевые ключи и настоящие вызовы не подключены.</p>
+          <p id="statusText">Прототип показывает весь путь номера успешного дозвона. Состояние сервера загружается…</p>
         </div>
       </header>
 
@@ -57,7 +57,7 @@
             <input id="callId" value="demo-call-1042" required />
             <label for="entityType">Куда передавать</label>
               <select id="entityType"><option value="lead" selected>Лид — первая стадия</option><option value="deal">Сделка</option></select>
-            <button type="submit">Передать в CRM</button>
+            <button id="submitButton" type="submit">Передать в CRM</button>
           </form>
         </div>
 
@@ -88,6 +88,7 @@
 
     <script>
       const $ = (id) => document.getElementById(id);
+      const isStaticDemo = location.hostname.endsWith("github.io");
       let current = null;
       const log = (message) => {
         const row = document.createElement("div");
@@ -102,7 +103,7 @@
       const pretty = (data) => $("response").textContent = JSON.stringify(data, null, 2);
 
       const post = async (path, payload) => {
-        if (location.hostname.endsWith("github.io")) {
+        if (isStaticDemo) {
           const clientPhone = String(payload.client_phone || payload.clientPhone || "").replace(/\D/g, "").replace(/^8/, "7");
           const callerId = String(payload.successful_caller_id || payload.successfulCallerId || "").replace(/\D/g, "").replace(/^8/, "7");
           if (path.includes("skorozvon-event")) {
@@ -124,6 +125,26 @@
         });
         return response.json();
       };
+
+      const loadMode = async () => {
+        if (isStaticDemo) {
+          $("modeBadge").textContent = "БЕЗОПАСНЫЙ ДЕМО-РЕЖИМ";
+          $("statusText").textContent = "Интерактивный макет показывает путь номера успешного дозвона и не изменяет боевую CRM.";
+          return;
+        }
+        $("modeBadge").textContent = "ЗАЩИЩЁННЫЙ СЕРВЕРНЫЙ КОНТУР";
+        $("submitButton").disabled = true;
+        try {
+          const health = await fetch("/api/health").then((response) => response.json());
+          $("statusText").textContent = health.ingestionEnabled
+            ? "CRM подключена. События принимаются только через защищённый API."
+            : "CRM подключена. Приём событий и реальные звонки безопасно отключены до настройки SIP-линий.";
+        } catch {
+          $("statusText").textContent = "Не удалось получить состояние серверного контура.";
+        }
+      };
+
+      loadMode();
 
       $("intakeForm").addEventListener("submit", async (event) => {
         event.preventDefault();

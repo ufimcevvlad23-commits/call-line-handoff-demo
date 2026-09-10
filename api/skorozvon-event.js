@@ -1,10 +1,14 @@
-import { buildCrmFields, normalizeSkorozvonEvent, parseLineMap, validateEvent, assertAllowedCallerId } from "../lib/calls.js";
-import { upsertCrmEntity } from "../lib/bitrix.js";
+import { buildCrmFields, getFieldMap, normalizeSkorozvonEvent, parseLineMap, validateEvent, assertAllowedCallerId } from "../lib/calls.js";
+import { bitrixCall, upsertCrmEntity } from "../lib/bitrix.js";
 import { isAuthorized, json, readJson } from "../lib/http.js";
+import { buildManagerLink } from "../lib/signing.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return json(res, 405, { ok: false, error: "Используйте POST" });
   try {
+    if (process.env.BITRIX24_WEBHOOK_URL && process.env.CALL_BRIDGE_ENABLED !== "true") {
+      return json(res, 503, { ok: false, error: "Приём звонков временно отключён до настройки SIP-линий" });
+    }
     if (process.env.BITRIX24_WEBHOOK_URL && !process.env.SKOROZVON_WEBHOOK_SECRET) {
       return json(res, 503, { ok: false, error: "Боевой режим заблокирован: не настроена подпись Скорозвона" });
     }
@@ -19,9 +23,11 @@ export default async function handler(req, res) {
     assertAllowedCallerId(event.successfulCallerId, process.env.ALLOWED_CALLER_IDS);
     const lineMap = parseLineMap(process.env.LINE_MAP_JSON);
     const lineId = lineMap[event.successfulCallerId] ?? "";
+    const fieldMap = getFieldMap();
     const fields = buildCrmFields(event, lineId, {
       leadStatusId: process.env.BITRIX_LEAD_STATUS_ID || "NEW",
-      assignedById: process.env.BITRIX_MANAGER_ID || ""
+      assignedById: process.env.BITRIX_MANAGER_ID || "",
+      fieldMap
     });
 
     if (!process.env.BITRIX24_WEBHOOK_URL) {
@@ -34,7 +40,19 @@ export default async function handler(req, res) {
       });
     }
 
-    const entity = await upsertCrmEntity(event, fields);
+    const entity = await upsertCrmEntity(event, fields, fieldMap.skorozvonCallId);
+    if (event.entityType === "lead" && process.env.PUBLIC_BASE_URL && process.env.MANAGER_ACTION_SECRET) {
+      const callLink = buildManagerLink(
+        process.env.PUBLIC_BASE_URL,
+        entity.entityType,
+        entity.entityId,
+        process.env.MANAGER_ACTION_SECRET
+      );
+      await bitrixCall("crm.lead.update", {
+        id: entity.entityId,
+        fields: { [fieldMap.callLink]: callLink }
+      });
+    }
     return json(res, 200, { ok: true, mode: "live", entity, fields });
   } catch (error) {
     return json(res, 500, { ok: false, error: error.message });
