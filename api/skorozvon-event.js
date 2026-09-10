@@ -19,7 +19,10 @@ export default async function handler(req, res) {
     assertAllowedCallerId(event.successfulCallerId, process.env.ALLOWED_CALLER_IDS);
     const lineMap = parseLineMap(process.env.LINE_MAP_JSON);
     const lineId = lineMap[event.successfulCallerId] ?? "";
-    const fields = buildCrmFields(event, lineId);
+    const fields = buildCrmFields(event, lineId, {
+      leadStatusId: process.env.BITRIX_LEAD_STATUS_ID || "NEW",
+      assignedById: process.env.BITRIX_MANAGER_ID || ""
+    });
 
     if (!process.env.BITRIX24_WEBHOOK_URL) {
       return json(res, 200, {

@@ -20,7 +20,15 @@ test("maps caller id to Bitrix line id", () => {
 
 test("builds CRM fields", () => {
   const event = normalizeSkorozvonEvent({ call_id: "abc", client_phone: "79991234567", caller_id: "79031112233" });
-  const fields = buildCrmFields(event, "reg151083");
+  const fields = buildCrmFields(event, "reg151083", { leadStatusId: "NEW", assignedById: "42" });
   assert.equal(fields.UF_CRM_SUCCESS_CALLER_ID, "79031112233");
   assert.equal(fields.UF_CRM_SUCCESS_LINE_ID, "reg151083");
+  assert.equal(fields.STATUS_ID, "NEW");
+  assert.equal(fields.ASSIGNED_BY_ID, "42");
+  assert.equal(fields.PHONE[0].VALUE, "+79991234567");
+});
+
+test("defaults new events to leads", () => {
+  const event = normalizeSkorozvonEvent({ call_id: "abc", client_phone: "79991234567", caller_id: "79031112233" });
+  assert.equal(event.entityType, "lead");
 });
