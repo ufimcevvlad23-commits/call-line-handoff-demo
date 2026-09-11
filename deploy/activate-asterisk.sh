@@ -44,7 +44,8 @@ systemctl enable callbridge-sip-firewall.service
 systemctl restart callbridge-sip-firewall.service
 systemctl unmask asterisk.service
 systemctl daemon-reload
-systemctl enable --now asterisk.service
+systemctl enable asterisk.service
+systemctl restart asterisk.service
 systemctl restart skorozvon-call-bridge.service
 
 ATTEMPT=0
