@@ -1,6 +1,8 @@
 const baseUrl = String(process.env.LOCAL_SERVICE_URL || "http://127.0.0.1:8790").replace(/\/$/, "");
 const clientPhone = String(process.env.TEST_CLIENT_PHONE || "").replace(/\D/g, "").replace(/^8/, "7");
+const runId = String(process.env.SMOKE_TEST_RUN_ID || "v1").trim();
 if (clientPhone.length !== 11) throw new Error("TEST_CLIENT_PHONE не настроен");
+if (!/^[a-zA-Z0-9_-]{1,48}$/.test(runId)) throw new Error("SMOKE_TEST_RUN_ID содержит недопустимые символы");
 if (!process.env.SKOROZVON_WEBHOOK_SECRET || !process.env.DASHBOARD_ACCESS_TOKEN) throw new Error("Не настроены smoke-test секреты");
 
 async function request(path, options = {}) {
@@ -10,9 +12,9 @@ async function request(path, options = {}) {
 }
 
 const payload = {
-  call_id: "bridge-installation-test-v1",
-  session_id: "bridge-installation-session-v1",
-  external_access_id: "bridge-installation-external-v1",
+  call_id: `bridge-installation-test-${runId}`,
+  session_id: `bridge-installation-session-${runId}`,
+  external_access_id: `bridge-installation-external-${runId}`,
   client_phone: clientPhone,
   entity_type: "lead",
   result: "qualified",
