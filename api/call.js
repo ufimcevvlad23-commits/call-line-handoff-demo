@@ -1,6 +1,6 @@
 import { originateManagerBridge } from "../lib/asterisk.js";
 import { getCrmEntity } from "../lib/bitrix.js";
-import { assertAllowedCallerId, getFieldMap, normalizePhone, parseLineMap } from "../lib/calls.js";
+import { getFieldMap, isAllowedCallerId, normalizePhone, parseLineMap } from "../lib/calls.js";
 import { isAuthorized, json, readJson } from "../lib/http.js";
 import { verifyEntitySignature } from "../lib/signing.js";
 import { getStore } from "../lib/store.js";
@@ -26,9 +26,13 @@ export default async function handler(req, res) {
     const callerId = normalizePhone(entity[fieldMap.successfulCallerId]);
     const callId = String(entity[fieldMap.skorozvonCallId] || "");
     attemptedCallId = callId;
-    assertAllowedCallerId(callerId, process.env.ALLOWED_CALLER_IDS);
+    const store = getStore();
+    const verifiedCaller = store.getVerifiedCallerId(callerId);
+    if (!isAllowedCallerId(callerId, process.env.ALLOWED_CALLER_IDS) && !verifiedCaller) {
+      return json(res, 403, { ok: false, error: "Caller ID не подтверждён успешным звонком актуализатора" });
+    }
     const lineMap = parseLineMap(process.env.LINE_MAP_JSON);
-    const lineId = String(lineMap[callerId] || "");
+    const lineId = String(lineMap[callerId] || verifiedCaller?.line_id || "");
     if (clientPhone.length !== 11 || callerId.length !== 11 || !lineId) {
       return json(res, 400, { ok: false, error: "В CRM ещё нет подтверждённого телефона, Caller ID или SIP-линии" });
     }
@@ -40,7 +44,6 @@ export default async function handler(req, res) {
       callId,
       lineId
     });
-    const store = getStore();
     if (callId && store.getCall(callId)) store.setCallState(callId, "call_requested", { lastError: null });
     store.audit("manager_call_requested", callId, { entityId: String(body.entityId), actionId: result.actionId });
     return json(res, 200, { ok: true, mode: "live", call: { callerId: `***${callerId.slice(-4)}`, lineId }, result });

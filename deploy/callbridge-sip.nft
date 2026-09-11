@@ -1,0 +1,8 @@
+table inet callbridge_sip {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "lo" accept
+    udp dport 5060 ip saddr { 62.105.135.81, 62.105.132.84 } accept
+    udp dport 5060 drop
+  }
+}

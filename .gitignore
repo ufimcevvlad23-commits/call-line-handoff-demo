@@ -8,4 +8,5 @@ node_modules/
 output/playwright/
 var/
 deployment-access*.json
+sip-access*.json
 *.tgz

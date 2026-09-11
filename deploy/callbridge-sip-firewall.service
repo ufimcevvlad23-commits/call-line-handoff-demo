@@ -1,0 +1,13 @@
+[Unit]
+Description=Restrict Call Bridge provider SIP port
+Before=asterisk.service
+
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/sbin/nft delete table inet callbridge_sip
+ExecStart=/usr/sbin/nft -f /etc/nftables.d/callbridge-sip.nft
+ExecStop=-/usr/sbin/nft delete table inet callbridge_sip
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

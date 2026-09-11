@@ -167,3 +167,41 @@ test("automatically readies a previously unverified caller after allowlist updat
     store.close();
   }
 });
+
+test("trusts a caller id only after an answered PBX CDR", () => {
+  const store = new CallStore(":memory:");
+  const previous = {
+    autoTrust: process.env.AUTO_TRUST_ANSWERED_CALLER_IDS,
+    defaultTrunk: process.env.DEFAULT_TRUNK_ENDPOINT,
+    allowed: process.env.ALLOWED_CALLER_IDS,
+    lineMap: process.env.LINE_MAP_JSON
+  };
+  try {
+    process.env.AUTO_TRUST_ANSWERED_CALLER_IDS = "true";
+    process.env.DEFAULT_TRUNK_ENDPOINT = "beeline-trunk-1";
+    process.env.ALLOWED_CALLER_IDS = "";
+    process.env.LINE_MAP_JSON = "{}";
+    store.upsertCall(event(), { qualified: true, state: "waiting_caller_id", crmSyncState: "synced" });
+    const result = applyCdrToStoredCall(store, {
+      eventId: "cdr-observed-caller",
+      sessionId: "session-1",
+      clientPhone: "79991234567",
+      callerId: "79031112233",
+      disposition: "ANSWERED",
+      occurredAt: "2026-09-10T10:01:00.000Z"
+    });
+    assert.equal(result.ready, true);
+    assert.equal(store.getVerifiedCallerId("79031112233").line_id, "beeline-trunk-1");
+    assert.equal(store.getCall("call-1").state, "ready");
+  } finally {
+    for (const [key, value] of Object.entries({
+      AUTO_TRUST_ANSWERED_CALLER_IDS: previous.autoTrust,
+      DEFAULT_TRUNK_ENDPOINT: previous.defaultTrunk,
+      ALLOWED_CALLER_IDS: previous.allowed,
+      LINE_MAP_JSON: previous.lineMap
+    })) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+    store.close();
+  }
+});

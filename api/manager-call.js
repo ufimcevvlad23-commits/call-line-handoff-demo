@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { getCrmEntity } from "../lib/bitrix.js";
 import { getFieldMap, normalizePhone, parseLineMap, isAllowedCallerId } from "../lib/calls.js";
 import { verifyEntitySignature } from "../lib/signing.js";
+import { getStore } from "../lib/store.js";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -34,7 +35,9 @@ export default async function handler(req, res) {
   const handoffStatus = String(entity[fieldMap.handoffStatus] || "Ожидает определения исходящего номера");
   const nonce = randomBytes(16).toString("base64");
   const lineMap = parseLineMap(process.env.LINE_MAP_JSON);
-  const enabled = process.env.CALLING_ENABLED === "true" && isAllowedCallerId(callerId, process.env.ALLOWED_CALLER_IDS) && Boolean(lineMap[callerId]);
+  const verifiedCaller = getStore().getVerifiedCallerId(callerId);
+  const callerAllowed = isAllowedCallerId(callerId, process.env.ALLOWED_CALLER_IDS) || Boolean(verifiedCaller);
+  const enabled = process.env.CALLING_ENABLED === "true" && callerAllowed && Boolean(lineMap[callerId] || verifiedCaller?.line_id);
   const payload = JSON.stringify({ entityType, entityId, signature });
 
   res.statusCode = 200;
