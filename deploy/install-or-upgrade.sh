@@ -25,6 +25,14 @@ systemctl daemon-reload
 systemctl enable skorozvon-call-bridge.service call-bridge-backup.timer call-bridge-healthcheck.timer
 systemctl restart skorozvon-call-bridge.service
 systemctl start call-bridge-backup.timer call-bridge-healthcheck.timer
-curl --fail --silent --max-time 8 http://127.0.0.1:8790/api/health
+HEALTH_ATTEMPT=0
+until curl --fail --silent --max-time 8 http://127.0.0.1:8790/api/health; do
+  HEALTH_ATTEMPT=$((HEALTH_ATTEMPT + 1))
+  if [ "$HEALTH_ATTEMPT" -ge 10 ]; then
+    systemctl --no-pager --full status skorozvon-call-bridge.service >&2 || true
+    exit 1
+  fi
+  sleep 1
+done
 echo
 echo "Call Bridge updated. CALLING_ENABLED remains controlled only by .env.production."
