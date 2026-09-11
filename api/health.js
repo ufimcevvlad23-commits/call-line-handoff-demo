@@ -11,6 +11,6 @@ export default async function handler(req, res) {
     ingestionEnabled,
     cdrEnabled: process.env.PBX_CDR_ENABLED === "true",
     callingEnabled,
-    sipStatus: callingEnabled ? "enabled" : "awaiting_provider_access"
+    sipStatus: callingEnabled ? "enabled" : (process.env.SIP_PUBLIC_IP ? "awaiting_sip_registration" : "awaiting_provider_access")
   });
 }

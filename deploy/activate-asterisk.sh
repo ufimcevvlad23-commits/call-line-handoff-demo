@@ -14,6 +14,8 @@ test -n "${SIP_PUBLIC_IP:-}" || { echo "Run with SIP_PUBLIC_IP=x.x.x.x" >&2; exi
 
 SIP_PUBLIC_IP="$SIP_PUBLIC_IP" node --env-file="$ENV_FILE" "$APP_DIR/deploy/bootstrap-sip-secrets.mjs" "$OVERLAY_PATH" "$ACCESS_FILE"
 node "$APP_DIR/deploy/merge-env.mjs" "$ENV_FILE" "$OVERLAY_PATH"
+chown root:callbridge "$ENV_FILE"
+chmod 0640 "$ENV_FILE"
 node --env-file="$ENV_FILE" "$APP_DIR/deploy/render-asterisk.mjs" "$STAGE_DIR"
 
 BACKUP_DIR="$BACKUP_ROOT/$(date -u +%Y%m%dT%H%M%SZ)"

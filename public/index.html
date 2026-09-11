@@ -91,7 +91,7 @@
           <div>
             <span class="eyebrow">Операционный контур</span>
             <h1>Скорозвон → CRM → тот же Caller ID</h1>
-            <p>Сбор и сопоставление уже работают отдельно от телефонии. Реальные исходящие вызовы останутся заблокированными до подключения SIP.</p>
+            <p>Сбор и сопоставление уже работают отдельно от телефонии. Реальные исходящие вызовы останутся заблокированными до регистрации и проверки SIP.</p>
           </div>
           <button id="refresh" class="secondary">Обновить</button>
         </header>
@@ -194,7 +194,7 @@
           ["Битрикс24",data.integrations.bitrix?.status==="connected"?"подключён":data.integrations.bitrix?.status==="error"?"ошибка — работает повтор":"ожидает первой синхронизации"],
           ["Опрос Скорозвона",data.integrations.skorozvon?.status==="connected"?"подключён":data.flags.skorozvonPolling?"ожидает опроса":"выключен"],
           ["Приём CDR",data.flags.cdrEnabled?"готов":"выключен"],
-          ["Реальные звонки",data.flags.callingEnabled?"включены":"заблокированы до SIP"]
+          ["Реальные звонки",data.flags.callingEnabled?"включены":"заблокированы до проверки SIP"]
         ];
         $("systems").replaceChildren(...systemRows.map(([name,status])=>{const row=el("div","system");row.append(el("span","",name),el("b","",status));return row;}));
         $("overall").textContent=data.flags.callingEnabled?"боевой режим":"предпусковая готовность";
