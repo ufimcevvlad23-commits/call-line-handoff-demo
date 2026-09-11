@@ -1,0 +1,11 @@
+[general]
+enabled = yes
+webenabled = no
+port = 5038
+bindaddr = 127.0.0.1
+
+[callbridge]
+secret = REPLACE_WITH_RANDOM_AMI_SECRET
+read = call,reporting,cdr
+write = call,originate
+permit = 127.0.0.1/255.255.255.255

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Call Bridge database backup
+
+[Timer]
+OnCalendar=*-*-* 02:35:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

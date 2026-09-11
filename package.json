@@ -1,14 +1,15 @@
 {
   "name": "skorozvon-bitrix-call-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "dev": "vercel dev"
+    "dev": "node server.js",
+    "backup": "node scripts/backup-db.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.5"
   }
 }

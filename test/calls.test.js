@@ -14,6 +14,13 @@ test("accepts common Skorozvon field names", () => {
   assert.equal(event.successfulCallerId, "79031112233");
 });
 
+test("accepts a qualified form before the PBX resolves caller id", () => {
+  const event = normalizeSkorozvonEvent({ call_id: "abc", phone: "+79991234567", session_id: "session-1" });
+  assert.deepEqual(validateEvent(event), []);
+  assert.equal(event.successfulCallerId, "");
+  assert.equal(event.sessionId, "session-1");
+});
+
 test("maps caller id to Bitrix line id", () => {
   const map = parseLineMap('{"+7 903 111-22-33":"reg151083"}');
   assert.equal(map["79031112233"], "reg151083");

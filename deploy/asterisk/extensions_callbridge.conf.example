@@ -1,0 +1,31 @@
+[callbridge-set-cid]
+exten => s,1,Set(CALLERID(num)=${ARG1})
+ same => n,Set(PJSIP_HEADER(add,X-CallBridge-Call-ID)=${ARG2})
+ same => n,Return()
+
+[callbridge-customer]
+exten => _X!,1,NoOp(Call Bridge ${CB_CALL_ID}: manager answered, calling customer)
+ same => n,GotoIf($["${CB_CALLER_ID}"=""]?blocked)
+ same => n,GotoIf($["${CB_TRUNK_ENDPOINT}"=""]?blocked)
+ same => n,Set(CALLERID(num)=${CB_CALLER_ID})
+ same => n,Dial(PJSIP/${EXTEN}@${CB_TRUNK_ENDPOINT},45,b(callbridge-set-cid^s^1(${CB_CALLER_ID}^${CB_CALL_ID})))
+ same => n,Hangup()
+ same => n(blocked),NoOp(Blocked: Caller ID or trunk endpoint is missing)
+ same => n,Hangup(21)
+
+[from-skorozvon-callbridge]
+; Скорозвон передаёт выбранный номер карусели как Caller ID.
+; В AstDB ключ callbridge-caller-route/<номер> содержит разрешённый endpoint Билайна.
+exten => _X!,1,NoOp(Skorozvon outbound call)
+ same => n,Set(CB_REQUESTED_CID=${FILTER(0-9,${CALLERID(num)})})
+ same => n,Set(CB_TRUNK_ENDPOINT=${DB(callbridge-caller-route/${CB_REQUESTED_CID})})
+ same => n,GotoIf($["${CB_TRUNK_ENDPOINT}"=""]?blocked)
+ same => n,Set(CALLERID(num)=${CB_REQUESTED_CID})
+ same => n,Dial(PJSIP/${EXTEN}@${CB_TRUNK_ENDPOINT},45,b(callbridge-set-cid^s^1(${CB_REQUESTED_CID}^${PJSIP_HEADER(read,X-Skorozvon-Call-ID)})))
+ same => n,Hangup()
+ same => n(blocked),NoOp(Blocked Caller ID not present in AstDB allowlist)
+ same => n,Hangup(21)
+
+[from-beeline-callbridge]
+exten => _X!,1,NoOp(Inbound call received while production routing is not configured)
+ same => n,Hangup(21)

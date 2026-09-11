@@ -2,7 +2,7 @@ import process from "node:process";
 import { createInterface } from "node:readline/promises";
 
 const input = createInterface({ input: process.stdin, output: process.stderr, terminal: false });
-const baseUrl = (await input.question("")).trim().replace(/\/$/, "");
+const baseUrl = String(process.env.BITRIX24_WEBHOOK_URL || await input.question("")).trim().replace(/\/$/, "");
 input.close();
 
 if (!/^https:\/\/[^/]+\.bitrix24\.ru\/rest\/\d+\/[a-z0-9]+$/i.test(baseUrl)) {
@@ -28,7 +28,11 @@ const specs = [
   ["successLineId", "SKZ_SUCCESS_LINE_ID", "ID исходящей SIP-линии"],
   ["skorozvonCallId", "SKZ_CALL_ID", "ID звонка Скорозвона"],
   ["actualizer", "SKZ_ACTUALIZER", "Актуализатор", "string"],
-  ["callLink", "SKZ_CALL_LINK", "Позвонить с номера успешного дозвона", "url"]
+  ["callLink", "SKZ_CALL_LINK", "Позвонить с номера успешного дозвона", "url"],
+  ["handoffStatus", "SKZ_STATUS", "Статус передачи номера"],
+  ["sessionId", "SKZ_SESSION_ID", "Session ID Скорозвона"],
+  ["externalAccessId", "SKZ_EXTERNAL_ACCESS_ID", "External access ID Скорозвона"],
+  ["lastError", "SKZ_LAST_ERROR", "Последняя ошибка интеграции"]
 ];
 
 const fieldMap = {};

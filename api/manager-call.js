@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { getCrmEntity } from "../lib/bitrix.js";
-import { getFieldMap, normalizePhone } from "../lib/calls.js";
+import { getFieldMap, normalizePhone, parseLineMap, isAllowedCallerId } from "../lib/calls.js";
 import { verifyEntitySignature } from "../lib/signing.js";
 
 function escapeHtml(value) {
@@ -31,13 +31,15 @@ export default async function handler(req, res) {
   const entity = await getCrmEntity(entityType, entityId);
   const clientPhone = normalizePhone(entity[fieldMap.clientPhone] || entity.PHONE?.[0]?.VALUE);
   const callerId = normalizePhone(entity[fieldMap.successfulCallerId]);
+  const handoffStatus = String(entity[fieldMap.handoffStatus] || "Ожидает определения исходящего номера");
   const nonce = randomBytes(16).toString("base64");
-  const enabled = process.env.CALL_BRIDGE_ENABLED === "true";
+  const lineMap = parseLineMap(process.env.LINE_MAP_JSON);
+  const enabled = process.env.CALLING_ENABLED === "true" && isAllowedCallerId(callerId, process.env.ALLOWED_CALLER_IDS) && Boolean(lineMap[callerId]);
   const payload = JSON.stringify({ entityType, entityId, signature });
 
   res.statusCode = 200;
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Security-Policy", `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src 'self'; base-uri 'none'; frame-ancestors 'self'`);
-  res.end(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Звонок по лиду</title><style>body{font-family:system-ui;background:#0b1020;color:#fff;margin:0;padding:32px}.card{max-width:560px;margin:auto;background:#151d31;border:1px solid #2b3856;border-radius:18px;padding:24px}p{color:#b7c2d8}button{width:100%;padding:14px;border:0;border-radius:10px;background:#377df7;color:#fff;font-weight:700}button:disabled{opacity:.45}pre{white-space:pre-wrap;background:#080c16;padding:12px;border-radius:10px}</style><div class="card"><h1>Звонок по лиду #${escapeHtml(entityId)}</h1><p>Клиент: +${escapeHtml(clientPhone)}</p><p>Исходящий номер: +${escapeHtml(callerId)}</p><button id="call" ${enabled ? "" : "disabled"}>Позвонить с того же номера</button><p>${enabled ? "Перед запуском проверьте номер клиента." : "Звонки временно отключены до настройки SIP-линий."}</p><pre id="result"></pre></div><script nonce="${nonce}">const button=document.getElementById('call');button.addEventListener('click',async()=>{button.disabled=true;const response=await fetch('/api/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${payload})});const data=await response.json();document.getElementById('result').textContent=data.ok?'Звонок запущен':(data.error||'Ошибка');});</script></html>`);
+  res.end(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Звонок по лиду</title><style>body{font-family:system-ui;background:#0b1020;color:#fff;margin:0;padding:32px}.card{max-width:560px;margin:auto;background:#151d31;border:1px solid #2b3856;border-radius:18px;padding:24px}p{color:#b7c2d8}.status{padding:10px 12px;border-radius:10px;background:#202b43;color:#d6e1f5}button{width:100%;padding:14px;border:0;border-radius:10px;background:#377df7;color:#fff;font-weight:700}button:disabled{opacity:.45}pre{white-space:pre-wrap;background:#080c16;padding:12px;border-radius:10px}</style><div class="card"><h1>Звонок по лиду #${escapeHtml(entityId)}</h1><p class="status">${escapeHtml(handoffStatus)}</p><p>Клиент: ${clientPhone ? `+${escapeHtml(clientPhone)}` : "не указан"}</p><p>Исходящий номер: ${callerId ? `+${escapeHtml(callerId)}` : "ещё определяется"}</p><button id="call" ${enabled ? "" : "disabled"}>Позвонить с того же номера</button><p>${enabled ? "После нажатия система сначала соединит менеджера, затем клиента." : "Кнопка включится только после подтверждения Caller ID и подключения SIP-транка."}</p><pre id="result"></pre></div><script nonce="${nonce}">const button=document.getElementById('call');button.addEventListener('click',async()=>{button.disabled=true;const response=await fetch('/api/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(${payload})});const data=await response.json();document.getElementById('result').textContent=data.ok?'Звонок запущен':(data.error||'Ошибка');});</script></html>`);
 }

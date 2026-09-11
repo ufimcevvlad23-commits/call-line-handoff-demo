@@ -1,0 +1,6 @@
+[Unit]
+Description=Check and recover Call Bridge service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/usr/bin/curl --fail --silent --max-time 8 http://127.0.0.1:8790/api/health >/dev/null || /usr/bin/systemctl restart skorozvon-call-bridge.service'

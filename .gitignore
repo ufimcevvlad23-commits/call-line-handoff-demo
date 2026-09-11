@@ -6,3 +6,6 @@ node_modules/
 *.log
 .playwright-cli/
 output/playwright/
+var/
+deployment-access*.json
+*.tgz

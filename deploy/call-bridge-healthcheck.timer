@@ -1,0 +1,10 @@
+[Unit]
+Description=Call Bridge health check every two minutes
+
+[Timer]
+OnBootSec=2m
+OnUnitActiveSec=2m
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target
