@@ -22,6 +22,15 @@ if ((bitrixConnectorUser || bitrixConnectorPassword)
     || !/^[a-zA-Z0-9_-]{24,128}$/.test(bitrixConnectorPassword))) {
   throw new Error("BITRIX_CONNECTOR_USERNAME и BITRIX_CONNECTOR_PASSWORD должны быть заданы вместе");
 }
+const bitrixInboundServer = String(process.env.BITRIX_INBOUND_SERVER || "");
+const bitrixInboundUser = String(process.env.BITRIX_INBOUND_USERNAME || "");
+const bitrixInboundPassword = String(process.env.BITRIX_INBOUND_PASSWORD || "");
+if ((bitrixInboundServer || bitrixInboundUser || bitrixInboundPassword)
+  && (!/^[a-zA-Z0-9.-]+$/.test(bitrixInboundServer)
+    || !/^[a-zA-Z0-9_.-]{3,64}$/.test(bitrixInboundUser)
+    || !/^[a-zA-Z0-9_-]{24,128}$/.test(bitrixInboundPassword))) {
+  throw new Error("BITRIX_INBOUND_SERVER, BITRIX_INBOUND_USERNAME и BITRIX_INBOUND_PASSWORD должны быть заданы вместе");
+}
 const amiUsername = required("ASTERISK_AMI_USERNAME", /^[a-zA-Z0-9_.-]{3,64}$/);
 const amiSecret = required("ASTERISK_AMI_SECRET", /^[a-zA-Z0-9_-]{24,128}$/);
 const cdrSecret = required("PBX_CDR_SECRET", /^[a-zA-Z0-9_-]{24,128}$/);
@@ -56,6 +65,49 @@ direct_media=no
 force_rport=yes
 rewrite_contact=yes
 rtp_symmetric=yes
+` : "";
+
+const bitrixInbound = bitrixInboundServer ? `
+[bitrix-browser-auth]
+type=auth
+auth_type=userpass
+username=${bitrixInboundUser}
+password=${bitrixInboundPassword}
+
+[bitrix-browser-aor]
+type=aor
+contact=sip:${bitrixInboundServer}:5060
+qualify_frequency=60
+
+[bitrix-browser]
+type=endpoint
+transport=transport-callbridge-users
+context=from-bitrix-browser
+disallow=all
+allow=alaw,ulaw
+outbound_auth=bitrix-browser-auth
+aors=bitrix-browser-aor
+from_user=${bitrixInboundUser}
+from_domain=${bitrixInboundServer}
+direct_media=no
+force_rport=yes
+rewrite_contact=yes
+rtp_symmetric=yes
+send_pai=yes
+
+[bitrix-browser-registration]
+type=registration
+transport=transport-callbridge-users
+outbound_auth=bitrix-browser-auth
+server_uri=sip:${bitrixInboundServer}:5060
+client_uri=sip:${bitrixInboundUser}@${bitrixInboundServer}
+contact_user=${bitrixInboundUser}
+retry_interval=60
+fatal_retry_interval=120
+forbidden_retry_interval=300
+expiration=300
+line=yes
+endpoint=bitrix-browser
 ` : "";
 
 const pjsip = `[global]
@@ -137,6 +189,7 @@ force_rport=yes
 rewrite_contact=yes
 rtp_symmetric=yes
 ${bitrixConnector}
+${bitrixInbound}
 
 [beeline-trunk-1]
 type=endpoint
@@ -222,6 +275,10 @@ exten => *43,1,Answer()
  same => n,Echo()
  same => n,Hangup()
 exten => _X!,1,NoOp(Direct Bitrix outbound dialing is disabled; use signed lead button)
+ same => n,Hangup(21)
+
+[from-bitrix-browser]
+exten => _X!,1,NoOp(Unsolicited inbound call from Bitrix connector is disabled)
  same => n,Hangup(21)
 
 [from-beeline-callbridge]

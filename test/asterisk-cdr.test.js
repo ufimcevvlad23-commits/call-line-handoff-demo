@@ -53,6 +53,9 @@ test("Asterisk renderer creates separate provider and authenticated user transpo
     MANAGER_SIP_PASSWORD: "m".repeat(32),
     BITRIX_CONNECTOR_USERNAME: "bitrix-test",
     BITRIX_CONNECTOR_PASSWORD: "b".repeat(32),
+    BITRIX_INBOUND_SERVER: "ip.example.bitrixphone.com",
+    BITRIX_INBOUND_USERNAME: "sip-test",
+    BITRIX_INBOUND_PASSWORD: "i".repeat(32),
     ASTERISK_AMI_USERNAME: "callbridge",
     ASTERISK_AMI_SECRET: "a".repeat(32),
     PBX_CDR_SECRET: "c".repeat(32),
@@ -71,6 +74,8 @@ test("Asterisk renderer creates separate provider and authenticated user transpo
     assert.match(pjsip, /\[bitrix-callbridge\]/);
     assert.match(pjsip, /context=from-bitrix-callbridge/);
     assert.match(pjsip, /username=bitrix-test/);
+    assert.match(pjsip, /\[bitrix-browser-registration\]/);
+    assert.match(pjsip, /client_uri=sip:sip-test@ip\.example\.bitrixphone\.com/);
     assert.match(dialplan, /AGI\(callbridge-cdr-agi\.mjs/);
     assert.doesNotMatch(pjsip, /REPLACE_WITH/);
   } finally {
