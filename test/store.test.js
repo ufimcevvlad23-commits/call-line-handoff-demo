@@ -46,6 +46,25 @@ test("resolves a CRM form to an observed Skorozvon call by phone and time", () =
   }
 });
 
+test("matches an existing Bitrix form lead only to a nearby unqualified call", () => {
+  const store = new CallStore(":memory:");
+  try {
+    store.upsertCall(event({ successfulCallerId: "79031112233" }), { qualified: false, state: "observed" });
+    const found = store.findUnqualifiedCallForCrmLead({
+      clientPhone: "79991234567",
+      createdAt: "2026-09-10T10:01:00.000Z"
+    });
+    assert.equal(found.skorozvon_call_id, "call-1");
+    store.upsertCall(event({ entityId: "42" }), { qualified: true, state: "ready", crmSyncState: "synced" });
+    assert.equal(store.findUnqualifiedCallForCrmLead({
+      clientPhone: "79991234567",
+      createdAt: "2026-09-10T10:01:00.000Z"
+    }), null);
+  } finally {
+    store.close();
+  }
+});
+
 test("matches simulated CDR by session and moves a qualified call to ready", () => {
   const store = new CallStore(":memory:");
   try {
@@ -144,7 +163,9 @@ test("automatically readies a previously unverified caller after allowlist updat
   const store = new CallStore(":memory:");
   const oldAllowed = process.env.ALLOWED_CALLER_IDS;
   const oldMap = process.env.LINE_MAP_JSON;
+  const oldAutoTrust = process.env.AUTO_TRUST_ANSWERED_CALLER_IDS;
   try {
+    process.env.AUTO_TRUST_ANSWERED_CALLER_IDS = "false";
     process.env.ALLOWED_CALLER_IDS = "";
     process.env.LINE_MAP_JSON = "{}";
     store.upsertCall(event(), { qualified: true, state: "waiting_caller_id", crmSyncState: "synced" });
@@ -164,6 +185,7 @@ test("automatically readies a previously unverified caller after allowlist updat
   } finally {
     if (oldAllowed === undefined) delete process.env.ALLOWED_CALLER_IDS; else process.env.ALLOWED_CALLER_IDS = oldAllowed;
     if (oldMap === undefined) delete process.env.LINE_MAP_JSON; else process.env.LINE_MAP_JSON = oldMap;
+    if (oldAutoTrust === undefined) delete process.env.AUTO_TRUST_ANSWERED_CALLER_IDS; else process.env.AUTO_TRUST_ANSWERED_CALLER_IDS = oldAutoTrust;
     store.close();
   }
 });
