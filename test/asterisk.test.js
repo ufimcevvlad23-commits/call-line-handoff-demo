@@ -32,6 +32,8 @@ test("builds an AMI originate request without placing a real call", async () => 
     assert.equal(result.accepted, true);
     assert.match(request, /Action: Originate/);
     assert.match(request, /Channel: PJSIP\/101/);
+    assert.match(request, /CallerID: 79991234567/);
+    assert.doesNotMatch(request, /CallerID: 79031112233/);
     assert.match(request, /CB_CALLER_ID=79031112233/);
     assert.match(request, /CB_TRUNK_ENDPOINT=beeline-trunk-1/);
   } finally {
