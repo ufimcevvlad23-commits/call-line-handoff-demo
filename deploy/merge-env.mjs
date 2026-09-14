@@ -1,4 +1,4 @@
-import { chmod, readFile, rename, writeFile } from "node:fs/promises";
+import { chmod, chown, readFile, rename, stat, writeFile } from "node:fs/promises";
 
 const [targetPath, overlayPath] = process.argv.slice(2);
 if (!targetPath || !overlayPath) throw new Error("Usage: node deploy/merge-env.mjs <target> <overlay>");
@@ -18,6 +18,7 @@ function parse(text) {
   return { order, values };
 }
 
+const targetMetadata = await stat(targetPath);
 const current = parse(await readFile(targetPath, "utf8"));
 const overlay = parse(await readFile(overlayPath, "utf8"));
 for (const key of overlay.order) {
@@ -27,6 +28,7 @@ for (const key of overlay.order) {
 const output = `${current.order.map((key) => `${key}=${current.values.get(key)}`).join("\n")}\n`;
 const temporaryPath = `${targetPath}.next`;
 await writeFile(temporaryPath, output, { encoding: "utf8", mode: 0o640 });
-await chmod(temporaryPath, 0o640);
+await chmod(temporaryPath, targetMetadata.mode & 0o777);
+if (process.platform !== "win32") await chown(temporaryPath, targetMetadata.uid, targetMetadata.gid);
 await rename(temporaryPath, targetPath);
 console.log(JSON.stringify({ ok: true, updatedKeys: overlay.order.length }));
