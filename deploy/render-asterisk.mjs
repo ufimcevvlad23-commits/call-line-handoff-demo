@@ -222,7 +222,6 @@ match=62.105.132.84
 
 const extensions = `[callbridge-set-cid]
 exten => s,1,Set(CALLERID(num)=\${ARG1})
- same => n,Set(PJSIP_HEADER(add,P-Asserted-Identity)=<sip:\${ARG1}@${publicIp}>)
  same => n,Set(PJSIP_HEADER(add,X-CallBridge-Call-ID)=\${ARG2})
  same => n,Return()
 

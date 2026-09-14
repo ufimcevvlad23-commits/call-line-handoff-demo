@@ -76,7 +76,9 @@ test("Asterisk renderer creates separate provider and authenticated user transpo
     assert.match(pjsip, /username=bitrix-test/);
     assert.match(pjsip, /\[bitrix-browser-registration\]/);
     assert.match(pjsip, /client_uri=sip:sip-test@ip\.example\.bitrixphone\.com/);
+    assert.match(pjsip, /\[beeline-trunk-1\][\s\S]*send_pai=yes/);
     assert.match(dialplan, /AGI\(callbridge-cdr-agi\.mjs/);
+    assert.doesNotMatch(dialplan, /P-Asserted-Identity/);
     assert.doesNotMatch(pjsip, /REPLACE_WITH/);
   } finally {
     await rm(directory, { recursive: true, force: true });
