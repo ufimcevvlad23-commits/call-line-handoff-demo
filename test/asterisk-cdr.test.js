@@ -51,6 +51,8 @@ test("Asterisk renderer creates separate provider and authenticated user transpo
     SKOROZVON_SIP_PASSWORD: "s".repeat(32),
     MANAGER_SIP_USERNAME: "manager-test",
     MANAGER_SIP_PASSWORD: "m".repeat(32),
+    BITRIX_CONNECTOR_USERNAME: "bitrix-test",
+    BITRIX_CONNECTOR_PASSWORD: "b".repeat(32),
     ASTERISK_AMI_USERNAME: "callbridge",
     ASTERISK_AMI_SECRET: "a".repeat(32),
     PBX_CDR_SECRET: "c".repeat(32),
@@ -66,6 +68,9 @@ test("Asterisk renderer creates separate provider and authenticated user transpo
     assert.match(pjsip, /bind=0\.0\.0\.0:5060/);
     assert.match(pjsip, /bind=0\.0\.0\.0:5070/);
     assert.match(pjsip, /auth=skorozvon-callbridge-auth/);
+    assert.match(pjsip, /\[bitrix-callbridge\]/);
+    assert.match(pjsip, /context=from-bitrix-callbridge/);
+    assert.match(pjsip, /username=bitrix-test/);
     assert.match(dialplan, /AGI\(callbridge-cdr-agi\.mjs/);
     assert.doesNotMatch(pjsip, /REPLACE_WITH/);
   } finally {

@@ -15,12 +15,48 @@ const skorozvonUser = required("SKOROZVON_SIP_USERNAME", /^[a-zA-Z0-9_.-]{4,64}$
 const skorozvonPassword = required("SKOROZVON_SIP_PASSWORD", /^[a-zA-Z0-9_-]{24,128}$/);
 const managerUser = required("MANAGER_SIP_USERNAME", /^[a-zA-Z0-9_.-]{4,64}$/);
 const managerPassword = required("MANAGER_SIP_PASSWORD", /^[a-zA-Z0-9_-]{24,128}$/);
+const bitrixConnectorUser = String(process.env.BITRIX_CONNECTOR_USERNAME || "");
+const bitrixConnectorPassword = String(process.env.BITRIX_CONNECTOR_PASSWORD || "");
+if ((bitrixConnectorUser || bitrixConnectorPassword)
+  && (!/^[a-zA-Z0-9_.-]{4,64}$/.test(bitrixConnectorUser)
+    || !/^[a-zA-Z0-9_-]{24,128}$/.test(bitrixConnectorPassword))) {
+  throw new Error("BITRIX_CONNECTOR_USERNAME и BITRIX_CONNECTOR_PASSWORD должны быть заданы вместе");
+}
 const amiUsername = required("ASTERISK_AMI_USERNAME", /^[a-zA-Z0-9_.-]{3,64}$/);
 const amiSecret = required("ASTERISK_AMI_SECRET", /^[a-zA-Z0-9_-]{24,128}$/);
 const cdrSecret = required("PBX_CDR_SECRET", /^[a-zA-Z0-9_-]{24,128}$/);
 const beelineHost = required("BEELINE_SIP_HOST", /^[a-zA-Z0-9.-]+$/);
 const beelinePort = Number(process.env.BEELINE_SIP_PORT || 5060);
 if (!Number.isInteger(beelinePort) || beelinePort < 1 || beelinePort > 65535) throw new Error("Некорректный BEELINE_SIP_PORT");
+
+const bitrixConnector = bitrixConnectorUser ? `
+[bitrix-callbridge-auth]
+type=auth
+auth_type=userpass
+username=${bitrixConnectorUser}
+password=${bitrixConnectorPassword}
+realm=${publicIp}
+
+[bitrix-callbridge-aor]
+type=aor
+max_contacts=5
+remove_existing=yes
+qualify_frequency=60
+
+[bitrix-callbridge]
+type=endpoint
+transport=transport-callbridge-users
+context=from-bitrix-callbridge
+disallow=all
+allow=alaw,ulaw
+auth=bitrix-callbridge-auth
+aors=bitrix-callbridge-aor
+identify_by=auth_username,username
+direct_media=no
+force_rport=yes
+rewrite_contact=yes
+rtp_symmetric=yes
+` : "";
 
 const pjsip = `[global]
 type=global
@@ -100,6 +136,7 @@ direct_media=no
 force_rport=yes
 rewrite_contact=yes
 rtp_symmetric=yes
+${bitrixConnector}
 
 [beeline-trunk-1]
 type=endpoint
@@ -178,6 +215,13 @@ exten => *43,1,Answer()
  same => n,Echo()
  same => n,Hangup()
 exten => _X!,1,NoOp(Direct manager outbound dialing is disabled; use signed Bitrix button)
+ same => n,Hangup(21)
+
+[from-bitrix-callbridge]
+exten => *43,1,Answer()
+ same => n,Echo()
+ same => n,Hangup()
+exten => _X!,1,NoOp(Direct Bitrix outbound dialing is disabled; use signed lead button)
  same => n,Hangup(21)
 
 [from-beeline-callbridge]
